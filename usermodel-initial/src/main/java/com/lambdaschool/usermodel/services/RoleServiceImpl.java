@@ -57,7 +57,7 @@ public class RoleServiceImpl
     public Role findRoleById(long id)
     {
         return rolerepos.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Role id " + id + " not found!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Role id " + id + " not found!"));
     }
 
     @Override
