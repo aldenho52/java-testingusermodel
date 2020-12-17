@@ -9,6 +9,7 @@ import com.lambdaschool.usermodel.models.Useremail;
 import com.lambdaschool.usermodel.services.UserService;
 import io.restassured.module.mockmvc.RestAssuredMockMvc;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -30,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @RunWith(SpringRunner.class)
@@ -156,37 +160,255 @@ public class UserControllerNoDBTest
     }
 
     @Test
-    public void getUserById()
+    public void getUserById() throws Exception
     {
+        String apiUrl = "/users/user/10";
+        Mockito.when(userService.findUserById(10))
+            .thenReturn(userList.get(0));
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+            .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+            .andReturn();
+        String tr = r.getResponse()
+            .getContentAsString();
+
+        ObjectMapper mapper = new ObjectMapper();
+        String er = mapper.writeValueAsString(userList.get(0));
+
+        System.out.println(tr);
+        assertEquals(er,
+            tr);
     }
 
     @Test
-    public void getUserByName()
+    public void getUserByIdNotFound() throws Exception
     {
+        String apiUrl = "/users/user/100";
+        Mockito.when(userService.findUserById(100))
+            .thenReturn(null);
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+            .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+            .andReturn();
+        String tr = r.getResponse()
+            .getContentAsString();
+
+        String er = "";
+
+        System.out.println(tr);
+        assertEquals(er,
+            tr);
     }
 
     @Test
-    public void getUserLikeName()
+    public void getUserByName() throws Exception
     {
+        String apiUrl = "/users/user/name/admin";
+
+        Mockito.when(userService.findByName("admin"))
+            .thenReturn(userList.get(0));
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+            .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+            .andReturn(); // this could throw an exception
+        String tr = r.getResponse()
+            .getContentAsString();
+
+        ObjectMapper mapper = new ObjectMapper();
+        String er = mapper.writeValueAsString(userList.get(0));
+
+        System.out.println("Expect: " + er);
+        System.out.println("Actual: " + tr);
+
+        Assert.assertEquals("Rest API Returns List",
+            er,
+            tr);
     }
 
     @Test
-    public void addNewUser()
+    public void getUserByNameNotFound() throws Exception
     {
+        String apiUrl = "/users/user/name/admin";
+
+        Mockito.when(userService.findByName("Turtle"))
+            .thenReturn(null);
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+            .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+            .andReturn(); // this could throw an exception
+        String tr = r.getResponse()
+            .getContentAsString();
+
+        String er = "";
+
+        System.out.println("Expect: " + er);
+        System.out.println("Actual: " + tr);
+
+        Assert.assertEquals(
+            er,
+            tr);
     }
 
     @Test
-    public void updateFullUser()
+    public void getUserLikeName() throws Exception
     {
+        String apiUrl = "/users/user/name/like/adm";
+
+        Mockito.when(userService.findByNameContaining("adm"))
+            .thenReturn(userList);
+
+        RequestBuilder rb = MockMvcRequestBuilders.get(apiUrl)
+            .accept(MediaType.APPLICATION_JSON);
+        MvcResult r = mockMvc.perform(rb)
+            .andReturn(); // this could throw an exception
+        String tr = r.getResponse()
+            .getContentAsString();
+
+        ObjectMapper mapper = new ObjectMapper();
+        String er = mapper.writeValueAsString(userList);
+
+        System.out.println("Expect: " + er);
+        System.out.println("Actual: " + tr);
+
+        Assert.assertEquals("Rest API Returns List",
+            er,
+            tr);
     }
 
     @Test
-    public void updateUser()
+    public void addNewUser() throws Exception
     {
+        String apiUrl = "/users/user";
+
+        User u1 = new User("alden",
+            "password",
+            "admin@lambdaschool.local");
+        u1.setUserid(12);
+
+        Role r1 = new Role("admin");
+        r1.setRoleid(1);
+
+        u1.getRoles()
+            .add(new UserRoles(u1,
+                r1));
+        u1.getUseremails()
+            .add(new Useremail(u1,
+                "admin@email.local"));
+        u1.getUseremails()
+            .add(new Useremail(u1,
+                "admin@mymail.local"));
+
+        ObjectMapper mapper = new ObjectMapper();
+        String userString = mapper.writeValueAsString(u1);
+
+        Mockito.when(userService.save(any(User.class)))
+            .thenReturn(u1);
+
+        RequestBuilder rb = MockMvcRequestBuilders.post(apiUrl)
+            .accept(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(userString);
+
+        mockMvc.perform(rb)
+            .andExpect(status().isCreated())
+            .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
-    public void deleteUserById()
+    public void updateFullUser() throws Exception
     {
+        String apiUrl = "/users/user/{userid}";
+
+        User u1 = new User("alden",
+            "password",
+            "admin@lambdaschool.local");
+        u1.setUserid(12);
+
+        Role r1 = new Role("admin");
+        r1.setRoleid(1);
+
+        u1.getRoles()
+            .add(new UserRoles(u1,
+                r1));
+        u1.getUseremails()
+            .add(new Useremail(u1,
+                "admin@email.local"));
+        u1.getUseremails()
+            .add(new Useremail(u1,
+                "admin@mymail.local"));
+
+        Mockito.when(userService.update(u1,
+            10L))
+            .thenReturn(u1);
+        ObjectMapper mapper = new ObjectMapper();
+        String userString = mapper.writeValueAsString(u1);
+
+        RequestBuilder rb = MockMvcRequestBuilders.put(apiUrl,
+            10L)
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .content(userString);
+
+        mockMvc.perform(rb)
+            .andExpect(status().isOk())
+            .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    public void updateUser() throws Exception
+    {
+        String apiUrl = "/users/user/{userid}";
+
+        User u1 = new User("alden",
+            "password",
+            "admin@lambdaschool.local");
+        u1.setUserid(12);
+
+//        Role r1 = new Role("admin");
+//        r1.setRoleid(1);
+//
+//        u1.getRoles()
+//            .add(new UserRoles(u1,
+//                r1));
+//        u1.getUseremails()
+//            .add(new Useremail(u1,
+//                "admin@email.local"));
+//        u1.getUseremails()
+//            .add(new Useremail(u1,
+//                "admin@mymail.local"));
+
+        Mockito.when(userService.update(u1,
+            10L))
+            .thenReturn(u1);
+        ObjectMapper mapper = new ObjectMapper();
+        String userString = mapper.writeValueAsString(u1);
+
+        RequestBuilder rb = MockMvcRequestBuilders.patch(apiUrl,
+            10L)
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON)
+            .content(userString);
+
+        mockMvc.perform(rb)
+            .andExpect(status().isOk())
+            .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    public void deleteUserById() throws Exception
+    {
+        String apiUrl = "/users/user/{id}";
+
+        RequestBuilder rb = MockMvcRequestBuilders.delete(apiUrl,
+            "12")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_JSON);
+        mockMvc.perform(rb)
+            .andExpect(status().isOk())
+            .andDo(MockMvcResultHandlers.print());
     }
 }
